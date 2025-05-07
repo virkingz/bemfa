@@ -1,7 +1,6 @@
 """Support for bemfa service."""
 from __future__ import annotations
 import asyncio
-
 import logging
 from typing import Any
 
@@ -38,7 +37,8 @@ class BemfaMqtt:
         self._hass = hass
 
         # Init MQTT connection
-        self._mqttc = mqtt.Client(uid, mqtt.MQTTv311)
+        self._mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,uid)
+
 
         self._topic_to_sync: dict[str, Sync] = {}
 
@@ -47,14 +47,17 @@ class BemfaMqtt:
         self._ping_receive_timer: Any = None
         self._ping_lost: int = 0
 
+        # Set callbacks
+        self._mqttc.on_message = self._mqtt_on_message
+
     def create_sync(self, sync: Sync):
-        """Add an topic to our watching list."""
+        """Add a topic to our watching list."""
         self._topic_to_sync[sync.topic] = sync
         self._mqttc.publish(
             TOPIC_PUBLISH.format(topic=sync.topic),
             sync.generate_msg(),
         )
-        self._mqttc.subscribe(sync.topic, 1)
+        self._mqttc.subscribe(sync.topic, qos=1)
 
     def modify_sync(self, sync: Sync):
         """Modify a sync."""
@@ -77,8 +80,6 @@ class BemfaMqtt:
         self._ping()
 
         self._mqttc.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEPALIVE)
-        self._mqttc.on_message = self._mqtt_on_message
-
         self._mqttc.loop_start()
 
         # Listen for state changes
@@ -87,7 +88,7 @@ class BemfaMqtt:
         )
 
         # Listen for heartbeat packages
-        self._mqttc.subscribe(TOPIC_PING, 1)
+        self._mqttc.subscribe(TOPIC_PING, qos=1)
 
     def _ping(self):
         async def _receive_job():
