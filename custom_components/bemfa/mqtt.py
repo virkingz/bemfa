@@ -37,7 +37,7 @@ class BemfaMqtt:
         self._hass = hass
 
         # Init MQTT connection
-        self._mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,uid)
+        self._mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,uid,mqtt.MQTTv311)
 
 
         self._topic_to_sync: dict[str, Sync] = {}
